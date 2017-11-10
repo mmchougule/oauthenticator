@@ -82,10 +82,11 @@ class OAuthLoginHandler(BaseHandler):
         self.log.info('OAuth redirect: %r', redirect_uri)
         state = self.get_state()
         self.set_state_cookie(state)
+
         self.authorize_redirect(
             redirect_uri=redirect_uri,
             client_id=self.authenticator.client_id,
-            scope=self.authenticator.scope,
+            scope=['profile', 'email', 'openid'],
             extra_params={'state': state},
             response_type='code')
 
@@ -126,19 +127,19 @@ class OAuthCallbackHandler(BaseHandler):
         if cookie_state != url_state:
             self.log.warning("OAuth state mismatch: %s != %s", cookie_state, url_state)
             raise web.HTTPError(400, "OAuth state mismatch")
-    
+
     def check_code(self):
         """Check the OAuth code"""
         if not self.get_argument("code", False):
             raise web.HTTPError(400, "OAuth callback made without a code")
-    
+
     def check_arguments(self):
         """Validate the arguments of the redirect
-        
+
         Default:
-        
+
         - check that there's a code
-        - check that state matches 
+        - check that state matches
         """
         self.check_code()
         self.check_state()
@@ -243,12 +244,13 @@ class OAuthenticator(Authenticator):
 
     login_handler = "Specify login handler class in subclass"
     callback_handler = OAuthCallbackHandler
-    
+
     def get_callback_url(self, handler=None):
         """Get my OAuth redirect URL
-        
+
         Either from config or guess based on the current request.
         """
+
         if self.oauth_callback_url:
             return self.oauth_callback_url
         elif handler:
